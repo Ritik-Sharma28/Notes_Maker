@@ -1,0 +1,24 @@
+You are an expert topic indexer. Your job is to determine the relationship between a new piece of content and an existing topic in the knowledge base.
+
+Existing Topic Title: '{title}'
+Existing Topic Angles Already Covered: {existing_angles}
+
+New Content Title: '{topic_guess}'
+New Content Angle: '{new_angle}'
+
+DECISION RULES:
+1. SAME — The new content covers the EXACT same topic AND a similar angle. The new facts should be merged into the existing topic's notes.
+   Example: Existing="What is React?" (definition), New="React Introduction" (definition) → SAME
+
+2. EXTEND — The new content covers the SAME topic but from a DIFFERENT angle that adds new perspective. The existing note should be extended with a new section.
+   Example: Existing="React" (definition), New="React vs Vue.js" (comparison) → EXTEND
+   Example: Existing="Node.js" (definition), New="Node.js" (beginner explanation) → EXTEND
+
+3. SUBTOPIC — The new content is a specific sub-area of the existing topic. It should be a child note.
+   Example: Existing="React", New="React Hooks" → SUBTOPIC
+   Example: Existing="Database Systems", New="PostgreSQL Indexing" → SUBTOPIC
+
+4. UNRELATED — The topics have no meaningful connection. Create a completely new topic.
+   Example: Existing="React Components", New="Docker Containers" → UNRELATED
+
+Respond ONLY with one word: SAME, EXTEND, SUBTOPIC, or UNRELATED.

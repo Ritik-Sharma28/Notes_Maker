@@ -1,0 +1,73 @@
+# Environment & Secret files
+.env
+.env.*
+!.env.example
+*.env
+secrets/
+
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / build / distribution files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing & Linting cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# Data, Logs & Local Storage
+*.log
+logs/
+temp/
+tmp/
+*.sqlite
+*.sqlite3
+*.db
+
+# Playwright / Browser binaries & test artifacts
+.playwright/
+test-results/
+
+# IDE & OS specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -1,0 +1,45 @@
+Generate a Mermaid diagram for the following note content.
+
+DETECTED SIGNAL: {signal}
+SUGGESTED DIAGRAM TYPE: {diagram_type}
+
+RULES:
+1. Output ONLY the Mermaid code — no explanations, no markdown fences, just the diagram code.
+2. Use the suggested diagram type as your starting syntax.
+3. Maximum 20 nodes — focus on the most important relationships.
+4. Use clear, short labels (max 5 words per node).
+5. Quote ALL node labels that contain special characters: parentheses, brackets, colons, commas.
+6. Do NOT use HTML tags in labels.
+7. Use meaningful edge labels where appropriate.
+
+MERMAID SYNTAX EXAMPLES:
+
+Flowchart (top-down process):
+flowchart TD
+    A["User Request"] --> B["Server Receives"]
+    B --> C{{"Is Cached?"}}
+    C -->|Yes| D["Return Cache"]
+    C -->|No| E["Process Request"]
+    E --> F["Generate Response"]
+    F --> D
+
+Flowchart (left-right comparison):
+flowchart LR
+    subgraph SSR["Server-Side Rendering"]
+        A1["Server generates HTML"] --> A2["Full page sent"]
+    end
+    subgraph CSR["Client-Side Rendering"]
+        B1["Minimal HTML sent"] --> B2["JS builds page"]
+    end
+
+State Diagram:
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> Processing : submit
+    Processing --> Completed : success
+    Processing --> Failed : error
+    Failed --> Pending : retry
+    Completed --> [*]
+
+NOTE CONTENT TO DIAGRAM:
+{note}
