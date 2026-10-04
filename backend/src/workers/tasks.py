@@ -2,8 +2,9 @@ import arq
 from src.config.settings import settings
 from src.pipeline.runner import run_pipeline
 
-async def run_pipeline_task(ctx, source_id: str):
-    await run_pipeline(source_id)
+async def run_pipeline_task(ctx, source_id: str, user_id: str, user_role: str):
+    """Background task to run pipeline with user context."""
+    await run_pipeline(source_id, user_id, user_role)
 
 class WorkerSettings:
     functions = [run_pipeline_task]

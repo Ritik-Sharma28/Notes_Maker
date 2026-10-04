@@ -6,6 +6,7 @@ from .code_block import CodeBlock
 from .comparison_table import ComparisonTable
 from .note import Note
 from .note_version import NoteVersion
+from .progress import Progress
 
 __all__ = [
     "Base",
@@ -15,5 +16,6 @@ __all__ = [
     "CodeBlock",
     "ComparisonTable",
     "Note",
-    "NoteVersion"
+    "NoteVersion",
+    "Progress"
 ]

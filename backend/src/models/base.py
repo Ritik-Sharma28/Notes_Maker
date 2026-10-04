@@ -1,8 +1,16 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
+
+
+class UserRole(str, Enum):
+    """User roles for access control."""
+    ADMIN = "admin"
+    REGULAR = "regular"
+
 
 class Base(DeclarativeBase):
     pass

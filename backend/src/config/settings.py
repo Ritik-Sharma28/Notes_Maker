@@ -73,11 +73,44 @@ class Settings(BaseSettings):
     HOST: str
     PORT: int
     DEBUG: bool
-    
+
+    # Supabase Auth
+    SUPABASE_URL: str
+    SUPABASE_JWT_SECRET: str
+    SUPABASE_ANON_KEY: str
+
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_USER_MAX_PER_WEEK: int = 2
+    RATE_LIMIT_ADMIN_MAX_PER_WEEK: int = -1  # -1 = unlimited
+    RATE_LIMIT_RETRY_MAX_PER_SOURCE: int = 3
+
+    # Admin
+    ADMIN_EMAILS: list[str] = []  # List of admin emails
+
+    # Error Handling
+    SENTRY_DSN: str | None = None
+    LOG_LEVEL: str = "INFO"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.validate()
+
+    def validate(self):
+        """Validate required settings."""
+        if not self.SUPABASE_URL:
+            raise ValueError("SUPABASE_URL is required")
+        if not self.SUPABASE_JWT_SECRET:
+            raise ValueError("SUPABASE_JWT_SECRET is required")
+        if not self.DATABASE_URL:
+            raise ValueError("DATABASE_URL is required")
+        if not self.REDIS_HOST:
+            raise ValueError("REDIS_HOST is required")
 
 settings = Settings()
