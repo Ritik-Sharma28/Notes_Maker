@@ -36,7 +36,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['source_id'], ['sources.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['auth.users'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['auth.users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
 
