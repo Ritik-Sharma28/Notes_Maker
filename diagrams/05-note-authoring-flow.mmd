@@ -1,0 +1,73 @@
+graph TD
+    Start([Index Keeper marks topic dirty]) --> Fetch[Fetch Topic from DB]
+    Fetch --> FetchFacts[Fetch ALL RawFacts<br/>grouped by angle]
+    Fetch --> FetchCode[Fetch ALL CodeBlocks]
+    Fetch --> FetchTables[Fetch ALL ComparisonTables]
+
+    FetchFacts --> Build[Build structured payload]
+    FetchCode --> Build
+    FetchTables --> Build
+
+    Build --> CheckRewrite{Is rewrite?}
+    CheckRewrite -->|Yes| AddFeedback[Append reviewer feedback]
+    CheckRewrite -->|No| CallLLM
+    AddFeedback --> CallLLM[Call LLM note_author]
+
+    CallLLM --> Strip[Strip markdown fences]
+    Strip --> Review[Reviewer Agent]
+
+    Review --> ReviewLLM[Call LLM reviewer]
+    ReviewLLM --> CheckApproved{Approved?}
+
+    CheckApproved -->|Yes| Diagram[Diagram Agent]
+    CheckApproved -->|No| CheckRetry{retry_count < 3?}
+
+    CheckRetry -->|Yes| Increment[Increment retry_count]
+    CheckRetry -->|No| AppendComment[Append feedback as HTML comment]
+
+    Increment --> StoreFeedback[Store reviewer_feedback]
+    StoreFeedback --> Rewrite[Set needs_rewrite=true]
+    Rewrite --> CallLLM
+
+    AppendComment --> Diagram
+
+    Diagram --> Detect[Detect signals<br/>Regex-based]
+    Detect --> CheckSignals{Signals detected?}
+
+    CheckSignals -->|No| Format[Formatter Agent]
+    CheckSignals -->|Yes| Limit[Limited to MAX_DIAGRAMS]
+
+    Limit --> LoopDiagrams[For each signal]
+    LoopDiagrams --> Generate[Call LLM diagram_agent]
+    Generate --> Extract[Extract Mermaid code]
+    Extract --> LoopDiagrams
+
+    LoopDiagrams --> Format
+
+    Format --> Insert[Insert diagrams<br/>at contextually<br/>appropriate positions]
+    Insert --> CheckExisting{Existing Note?}
+
+    CheckExisting -->|Yes| SaveVersion[Save as NoteVersion]
+    CheckExisting -->|No| CreateNote[Create new Note]
+
+    SaveVersion --> UpdateNote[Update Note<br/>increment version]
+    CreateNote --> ClearDirty[Clear topic.is_dirty]
+    UpdateNote --> ClearDirty
+
+    ClearDirty --> AddCompleted[Add to completed_topic_ids]
+    AddCompleted --> NextTopic[Next Topic Agent]
+
+    NextTopic --> IncrementIdx[Increment current_topic_idx]
+    IncrementIdx --> ResetState[Reset per-topic state]
+    ResetState --> CheckMore{More topics?}
+
+    CheckMore -->|Yes| LoopBack[Loop back to author_note]
+    CheckMore -->|No| End([END])
+
+    style Start fill:#ff9999
+    style End fill:#99ff99
+    style CallLLM fill:#ffe1f5
+    style ReviewLLM fill:#ffe1f5
+    style Generate fill:#ffe1f5
+    style Format fill:#e1f5ff
+    style NextTopic fill:#e1f5ff

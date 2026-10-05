@@ -1,0 +1,79 @@
+graph TB
+    subgraph Client["Clients"]
+        WebClient[Web Browser]
+        MobileClient[Mobile App]
+    end
+
+    subgraph LB["Load Balancer"]
+        LBNode[Load Balancer<br/>Nginx/ALB]
+    end
+
+    subgraph API_Cluster["API Server Cluster"]
+        API1[API Server 1<br/>uvicorn]
+        API2[API Server 2<br/>uvicorn]
+        APIN[API Server N<br/>uvicorn]
+    end
+
+    subgraph Worker_Cluster["Worker Cluster"]
+        Worker1[arq Worker 1]
+        Worker2[arq Worker 2]
+        WorkerN[arq Worker N]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[PostgreSQL<br/>+ pgvector<br/>Primary]
+        PG_Replica1[PostgreSQL<br/>Read Replica 1]
+        PG_Replica2[PostgreSQL<br/>Read Replica 2]
+        Redis_Cluster[Redis Cluster<br/>6 nodes<br/>3 masters + 3 replicas]
+    end
+
+    subgraph Auth["Authentication"]
+        Supabase[Supabase Cloud<br/>Auth Service]
+    end
+
+    WebClient --> LB
+    MobileClient --> LB
+
+    LB --> API1
+    LB --> API2
+    LB --> APIN
+
+    API1 --> Worker1
+    API1 --> Worker2
+    API2 --> Worker1
+    API2 --> Worker2
+    APIN --> Worker1
+    APIN --> Worker2
+
+    API1 --> PG
+    API2 --> PG
+    APIN --> PG
+
+    API1 --> PG_Replica1
+    API2 --> PG_Replica1
+    APIN --> PG_Replica2
+
+    Worker1 --> PG
+    Worker2 --> PG
+    WorkerN --> PG
+
+    API1 --> Redis_Cluster
+    API2 --> Redis_Cluster
+    APIN --> Redis_Cluster
+    Worker1 --> Redis_Cluster
+    Worker2 --> Redis_Cluster
+    WorkerN --> Redis_Cluster
+
+    API1 --> Supabase
+    API2 --> Supabase
+    APIN --> Supabase
+
+    PG -.->|Replication| PG_Replica1
+    PG -.->|Replication| PG_Replica2
+
+    style Client fill:#e1f5ff
+    style LB fill:#fff4e1
+    style API_Cluster fill:#ffe1f5
+    style Worker_Cluster fill:#ffe1f5
+    style Data fill:#e1ffe1
+    style Auth fill:#ffe1f5

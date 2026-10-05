@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatNotes Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 40px;
+        }
+        .diagram-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .diagram-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .diagram-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        pre {
+            display: none;
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .nav {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav a {
+            color: #0066cc;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatNotes Architecture Diagrams</h1>
+
+    <div class="nav">
+        <strong>Quick Links:</strong>
+        <a href="#d1">1. High-Level Architecture</a>
+        <a href="#d2">2. Agent Pipeline Flow</a>
+        <a href="#d3">3. Database Schema</a>
+        <a href="#d4">4. Authentication Flow</a>
+        <a href="#d5">5. Note Authoring Flow</a>
+        <a href="#d6">6. Complete Ingestion Flow</a>
+        <a href="#d7">7. Deployment Architecture</a>
+    </div>
+
+    <div class="diagram-container" id="d1">
+        <div class="diagram-title">1. High-Level Architecture</div>
+        <div class="diagram-description">
+            Complete system architecture showing all layers: Client, API Gateway, Background Tasks, LangGraph Pipeline, and Data Layer.
+            Visualizes the separation between synchronous API routes and asynchronous background processing.
+        </div>
+        <div class="mermaid">
+graph TB
+    subgraph Client["Client Layer"]
+        WebApp[Web/Mobile App]
+    end
+
+    subgraph API["API Gateway (FastAPI)"]
+        Auth[Authentication<br/>Supabase JWT]
+        RateLimit[Rate Limiting<br/>Redis-based]
+        Validation[Request Validation]
+        CORS[CORS Middleware]
+    end
+
+    subgraph SyncAPI["Synchronous API Routes"]
+        Sources[GET /sources]
+        Progress[GET /progress]
+        Topics[GET /topics]
+        Export[GET /export]
+    end
+
+    subgraph AsyncAPI["Async API"]
+        Ingest[POST /ingest]
+    end
+
+    subgraph Queue["Background Task Queue"]
+        Redis[Redis<br/>Task Queue]
+    end
+
+    subgraph Worker["Background Worker"]
+        ArqWorker[arq Worker<br/>run_pipeline_task]
+    end
+
+    subgraph Pipeline["LangGraph Agent Pipeline"]
+        Patch[Patch Builder<br/>non-LLM]
+        Extract[Extractor<br/>LLM]
+        Index[Index Keeper<br/>LLM+Embeddings]
+        Author[Note Author<br/>LLM]
+        Review[Reviewer<br/>LLM]
+        Diagram[Diagram Agent<br/>LLM+Regex]
+        Format[Formatter<br/>non-LLM]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[PostgreSQL<br/>+ pgvector]
+        RedisData[Redis<br/>Rate Limit]
+        Supabase[Supabase<br/>Auth]
+    end
+
+    WebApp -->|HTTPS + JWT| CORS
+    CORS --> Auth
+    Auth --> RateLimit
+    RateLimit --> Validation
+
+    Validation --> Sources
+    Validation --> Progress
+    Validation --> Topics
+    Validation --> Export
+    Validation --> Ingest
+
+    Ingest -->|Enqueue Task| Redis
+    Redis --> ArqWorker
+    ArqWorker --> Pipeline
+
+    Pipeline --> Patch
+    Patch --> Extract
+    Extract --> Index
+    Index --> Author
+    Author --> Review
+    Review -->|Approved| Diagram
+    Review -->|Rejected| Author
+    Diagram --> Format
+    Format --> PG
+
+    Sources --> PG
+    Progress --> PG
+    Topics --> PG
+    Export --> PG
+
+    RateLimit --> RedisData
+    Auth --> Supabase
+
+    style Client fill:#e1f5ff
+    style API fill:#fff4e1
+    style Pipeline fill:#ffe1f5
+    style Data fill:#e1ffe1
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d2">
+        <div class="diagram-title">2. Agent Pipeline Flow</div>
+        <div class="diagram-description">
+            Detailed flow of the LangGraph agent pipeline from message extraction through all 8 nodes.
+            Shows conditional routing, retry loops, and success/failure paths.
+        </div>
+        <div class="mermaid">
+graph TD
+    Start([Pipeline Start<br/>run_pipeline source_id]) --> ExtractMsg[Phase 1: Message Extraction]
+    ExtractMsg --> FetchSource[Fetch Source from DB]
+    FetchSource --> CheckURL{share_url?}
+    CheckURL -->|Yes| ChatGPT[ChatGPTExtractor<br/>Playwright Scraping]
+    CheckURL -->|No| CheckRaw{raw_text?}
+    CheckRaw -->|Yes| RawPaste[RawPasteExtractor]
+    CheckRaw -->|No| Error1[Error: No content]
+    ChatGPT --> PersistMsg[Persist messages to<br/>source.raw_json]
+    RawPaste --> PersistMsg
+    PersistMsg --> UpdateStatus[Update status=processing]
+    UpdateStatus --> BuildGraph[Build LangGraph]
+
+    BuildGraph --> InitState[Initialize Pipeline State]
+    InitState --> Node1[Node 1: build_patches<br/>non-LLM]
+    Node1 --> Node2[Node 2: extract<br/>LLM]
+    Node2 --> Node3[Node 3: index_route<br/>LLM+Embeddings]
+
+    Node3 --> CheckDirty{has_dirty_topics?}
+    CheckDirty -->|No| End1([END])
+    CheckDirty -->|Yes| Node4[Node 4: author_note<br/>LLM]
+
+    Node4 --> Node5[Node 5: review<br/>LLM]
+    Node5 --> CheckReview{review_decision?}
+    CheckReview -->|Rejected<br/>& retry < 3| Node4
+    CheckReview -->|Approved| Node6[Node 6: diagram<br/>LLM+Regex]
+    CheckReview -->|Max retries| Node6
+
+    Node6 --> Node7[Node 7: format<br/>non-LLM]
+    Node7 --> Node8[Node 8: next_topic<br/>non-LLM]
+    Node8 --> CheckMore{more_topics?}
+    CheckMore -->|Yes| Node4
+    CheckMore -->|No| End2([END])
+
+    End1 --> Complete[Update status=completed]
+    End2 --> Complete
+    Error1 --> Failed[Update status=failed]
+    Complete --> Done([Pipeline Complete])
+    Failed --> Done
+
+    style Start fill:#ff9999
+    style End1 fill:#99ff99
+    style End2 fill:#99ff99
+    style Done fill:#99ff99
+    style Failed fill:#ff9999
+    style Error1 fill:#ff9999
+    style Node1 fill:#e1f5ff
+    style Node2 fill:#ffe1f5
+    style Node3 fill:#ffe1f5
+    style Node4 fill:#ffe1f5
+    style Node5 fill:#ffe1f5
+    style Node6 fill:#ffe1f5
+    style Node7 fill:#e1f5ff
+    style Node8 fill:#e1f5ff
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d3">
+        <div class="diagram-title">3. Database Schema</div>
+        <div class="diagram-description">
+            Entity-Relationship diagram showing all database tables and their relationships.
+            Includes auth.users, sources, topics, raw_facts, code_blocks, comparison_tables, notes, note_versions, and progress.
+        </div>
+        <div class="mermaid">
+erDiagram
+    auth_users ||--o{ sources : "owns"
+    auth_users ||--o{ topics : "owns"
+    auth_users ||--o{ notes : "owns"
+    auth_users ||--o{ progress : "tracks"
+    auth_users ||--o{ raw_facts : "owns"
+    auth_users ||--o{ code_blocks : "owns"
+    auth_users ||--o{ comparison_tables : "owns"
+
+    sources ||--o{ progress : "has"
+    sources ||--o{ raw_facts : "contributes to"
+    sources ||--o{ code_blocks : "contributes to"
+    sources ||--o{ comparison_tables : "contributes to"
+
+    topics ||--o{ raw_facts : "contains"
+    topics ||--o{ code_blocks : "contains"
+    topics ||--o{ comparison_tables : "contains"
+    topics ||--o{ notes : "has"
+    topics ||--o{ topics : "parent-child"
+
+    notes ||--o{ note_versions : "version history"
+
+    auth_users {
+        uuid id PK
+        string email
+        string role
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    sources {
+        uuid id PK
+        uuid user_id FK
+        string platform
+        string share_url
+        jsonb raw_json
+        string status
+        string error_message
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    topics {
+        uuid id PK
+        uuid user_id FK
+        string title
+        uuid parent_topic_id FK
+        vector embedding
+        boolean is_dirty
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    raw_facts {
+        uuid id PK
+        uuid user_id FK
+        uuid topic_id FK
+        uuid source_id FK
+        string angle
+        text fact_text
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    code_blocks {
+        uuid id PK
+        uuid topic_id FK
+        uuid source_id FK
+        string label
+        string language
+        text code
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    comparison_tables {
+        uuid id PK
+        uuid topic_id FK
+        uuid source_id FK
+        string title
+        jsonb rows
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    notes {
+        uuid id PK
+        uuid user_id FK
+        uuid topic_id FK
+        text content_markdown
+        jsonb diagrams
+        integer version
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    note_versions {
+        uuid id PK
+        uuid note_id FK
+        text content_markdown
+        jsonb diagrams
+        integer version
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    progress {
+        uuid id PK
+        uuid source_id FK
+        uuid user_id FK
+        string current_agent
+        string current_step
+        integer percentage
+        text message
+        text error_message
+        integer retry_count
+        jsonb last_agent_state
+        string user_role
+        timestamp created_at
+        timestamp updated_at
+    }
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d4">
+        <div class="diagram-title">4. Authentication Flow</div>
+        <div class="diagram-description">
+            Sequence diagram showing the complete authentication flow from user login through API request processing.
+            Includes JWT verification, user role determination, rate limiting, and database access.
+        </div>
+        <div class="mermaid">
+sequenceDiagram
+    participant Client as Client
+    participant Supabase as Supabase Auth
+    participant API as FastAPI API
+    participant JWT as JWT Verifier
+    participant RateLimit as Rate Limiter
+    participant Route as Route Handler
+    participant DB as Database
+
+    Client->>Supabase: 1. User logs in
+    Supabase-->>Client: 2. Return JWT token
+
+    Client->>API: 3. API Request<br/>Authorization: Bearer <token>
+    API->>JWT: 4. Extract token
+    JWT->>JWT: 5. Decode token
+    JWT->>JWT: 6. Verify signature
+    JWT->>JWT: 7. Check expiration
+    JWT-->>API: 8. Extract user_id, email
+
+    API->>JWT: 9. get_user_role(email)
+    JWT->>JWT: 10. Check ADMIN_EMAILS whitelist
+    JWT-->>API: 11. Return user_role
+
+    API->>RateLimit: 12. check_rate_limit(user_id, user_role)
+    RateLimit->>RateLimit: 13. Admin? → unlimited
+    RateLimit->>RateLimit: 14. Regular? → check Redis
+    RateLimit-->>API: 15. allowed=true/false
+
+    alt Rate limit exceeded
+        API-->>Client: 16. 429 Too Many Requests
+    else Rate limit OK
+        API->>Route: 17. Execute route handler
+        Route->>DB: 18. Query with user_id filter
+        DB-->>Route: 19. Return data
+        Route-->>API: 20. Return response
+        API-->>Client: 21. 200 OK with data
+    end
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d5">
+        <div class="diagram-title">5. Note Authoring Flow</div>
+        <div class="diagram-description">
+            Detailed flow of the note authoring process for a single topic.
+            Shows the author → review loop, diagram generation, formatting, and note versioning.
+        </div>
+        <div class="mermaid">
+graph TD
+    Start([Index Keeper marks topic dirty]) --> Fetch[Fetch Topic from DB]
+    Fetch --> FetchFacts[Fetch ALL RawFacts<br/>grouped by angle]
+    Fetch --> FetchCode[Fetch ALL CodeBlocks]
+    Fetch --> FetchTables[Fetch ALL ComparisonTables]
+
+    FetchFacts --> Build[Build structured payload]
+    FetchCode --> Build
+    FetchTables --> Build
+
+    Build --> CheckRewrite{Is rewrite?}
+    CheckRewrite -->|Yes| AddFeedback[Append reviewer feedback]
+    CheckRewrite -->|No| CallLLM
+    AddFeedback --> CallLLM[Call LLM note_author]
+
+    CallLLM --> Strip[Strip markdown fences]
+    Strip --> Review[Reviewer Agent]
+
+    Review --> ReviewLLM[Call LLM reviewer]
+    ReviewLLM --> CheckApproved{Approved?}
+
+    CheckApproved -->|Yes| Diagram[Diagram Agent]
+    CheckApproved -->|No| CheckRetry{retry_count < 3?}
+
+    CheckRetry -->|Yes| Increment[Increment retry_count]
+    CheckRetry -->|No| AppendComment[Append feedback as HTML comment]
+
+    Increment --> StoreFeedback[Store reviewer_feedback]
+    StoreFeedback --> Rewrite[Set needs_rewrite=true]
+    Rewrite --> CallLLM
+
+    AppendComment --> Diagram
+
+    Diagram --> Detect[Detect signals<br/>Regex-based]
+    Detect --> CheckSignals{Signals detected?}
+
+    CheckSignals -->|No| Format[Formatter Agent]
+    CheckSignals -->|Yes| Limit[Limited to MAX_DIAGRAMS]
+
+    Limit --> LoopDiagrams[For each signal]
+    LoopDiagrams --> Generate[Call LLM diagram_agent]
+    Generate --> Extract[Extract Mermaid code]
+    Extract --> LoopDiagrams
+
+    LoopDiagrams --> Format
+
+    Format --> Insert[Insert diagrams<br/>at contextually<br/>appropriate positions]
+    Insert --> CheckExisting{Existing Note?}
+
+    CheckExisting -->|Yes| SaveVersion[Save as NoteVersion]
+    CheckExisting -->|No| CreateNote[Create new Note]
+
+    SaveVersion --> UpdateNote[Update Note<br/>increment version]
+    CreateNote --> ClearDirty[Clear topic.is_dirty]
+    UpdateNote --> ClearDirty
+
+    ClearDirty --> AddCompleted[Add to completed_topic_ids]
+    AddCompleted --> NextTopic[Next Topic Agent]
+
+    NextTopic --> IncrementIdx[Increment current_topic_idx]
+    IncrementIdx --> ResetState[Reset per-topic state]
+    ResetState --> CheckMore{More topics?}
+
+    CheckMore -->|Yes| LoopBack[Loop back to author_note]
+    CheckMore -->|No| End([END])
+
+    style Start fill:#ff9999
+    style End fill:#99ff99
+    style CallLLM fill:#ffe1f5
+    style ReviewLLM fill:#ffe1f5
+    style Generate fill:#ffe1f5
+    style Format fill:#e1f5ff
+    style NextTopic fill:#e1f5ff
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d6">
+        <div class="diagram-title">6. Complete Ingestion Flow</div>
+        <div class="diagram-description">
+            Sequence diagram showing the end-to-end ingestion process from client request to completion.
+            Includes message extraction, pipeline execution, database updates, and progress tracking.
+        </div>
+        <div class="mermaid">
+sequenceDiagram
+    participant Client as Client
+    participant API as FastAPI
+    participant Redis as Redis Queue
+    participant Worker as arq Worker
+    participant Pipeline as LangGraph Pipeline
+    participant Extractor as Message Extractor
+    participant DB as PostgreSQL
+
+    Client->>API: 1. POST /api/v1/ingest<br/>{share_url: "..."}
+    API->>API: 2. Verify JWT
+    API->>API: 3. Check rate limit
+    API->>DB: 4. Create Source record
+    DB-->>API: 5. source_id
+    API->>DB: 6. Create Progress record
+    API->>Redis: 7. enqueue_job("run_pipeline_task", source_id)
+    API-->>Client: 8. 202 Accepted<br/>{source_id, status: "processing"}
+
+    Redis->>Worker: 9. Dequeue job
+    Worker->>DB: 10. Fetch Source
+    DB-->>Worker: 11. Source data
+    Worker->>Extractor: 12. Extract messages
+    Extractor->>Extractor: 13. Playwright scraping
+    Extractor-->>Worker: 14. raw_messages
+    Worker->>DB: 15. Update source.status = "processing"
+    Worker->>Pipeline: 16. Run LangGraph pipeline
+
+    Pipeline->>Pipeline: 17. build_patches
+    Pipeline->>Pipeline: 18. extract (LLM)
+    Pipeline->>Pipeline: 19. index_route (LLM+Emb)
+    Pipeline->>DB: 20. Create/Update Topics
+    Pipeline->>DB: 21. Insert RawFacts, CodeBlocks, Tables
+
+    loop For each dirty topic
+        Pipeline->>Pipeline: 22. author_note (LLM)
+        Pipeline->>Pipeline: 23. review (LLM)
+        alt Rejected
+            Pipeline->>Pipeline: 24. Retry author_note
+        end
+        Pipeline->>Pipeline: 25. diagram (LLM)
+        Pipeline->>Pipeline: 26. format
+        Pipeline->>DB: 27. Create/Update Notes
+        Pipeline->>DB: 28. Create NoteVersions
+    end
+
+    Pipeline-->>Worker: 29. Pipeline complete
+    Worker->>DB: 30. Update source.status = "completed"
+    Worker-->>Redis: 31. Job complete
+
+    Note over Client,Redis: Client polls GET /progress for updates
+        </div>
+    </div>
+
+    <div class="diagram-container" id="d7">
+        <div class="diagram-title">7. Deployment Architecture</div>
+        <div class="diagram-description">
+            Production deployment architecture showing horizontal scaling with load balancer,
+            API server cluster, worker cluster, PostgreSQL with read replicas, and Redis Cluster.
+        </div>
+        <div class="mermaid">
+graph TB
+    subgraph Client["Clients"]
+        WebClient[Web Browser]
+        MobileClient[Mobile App]
+    end
+
+    subgraph LB["Load Balancer"]
+        LBNode[Load Balancer<br/>Nginx/ALB]
+    end
+
+    subgraph API_Cluster["API Server Cluster"]
+        API1[API Server 1<br/>uvicorn]
+        API2[API Server 2<br/>uvicorn]
+        APIN[API Server N<br/>uvicorn]
+    end
+
+    subgraph Worker_Cluster["Worker Cluster"]
+        Worker1[arq Worker 1]
+        Worker2[arq Worker 2]
+        WorkerN[arq Worker N]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[PostgreSQL<br/>+ pgvector<br/>Primary]
+        PG_Replica1[PostgreSQL<br/>Read Replica 1]
+        PG_Replica2[PostgreSQL<br/>Read Replica 2]
+        Redis_Cluster[Redis Cluster<br/>6 nodes<br/>3 masters + 3 replicas]
+    end
+
+    subgraph Auth["Authentication"]
+        Supabase[Supabase Cloud<br/>Auth Service]
+    end
+
+    WebClient --> LB
+    MobileClient --> LB
+
+    LB --> API1
+    LB --> API2
+    LB --> APIN
+
+    API1 --> Worker1
+    API1 --> Worker2
+    API2 --> Worker1
+    API2 --> Worker2
+    APIN --> Worker1
+    APIN --> Worker2
+
+    API1 --> PG
+    API2 --> PG
+    APIN --> PG
+
+    API1 --> PG_Replica1
+    API2 --> PG_Replica1
+    APIN --> PG_Replica2
+
+    Worker1 --> PG
+    Worker2 --> PG
+    WorkerN --> PG
+
+    API1 --> Redis_Cluster
+    API2 --> Redis_Cluster
+    APIN --> Redis_Cluster
+    Worker1 --> Redis_Cluster
+    Worker2 --> Redis_Cluster
+    WorkerN --> Redis_Cluster
+
+    API1 --> Supabase
+    API2 --> Supabase
+    APIN --> Supabase
+
+    PG -.->|Replication| PG_Replica1
+    PG -.->|Replication| PG_Replica2
+
+    style Client fill:#e1f5ff
+    style LB fill:#fff4e1
+    style API_Cluster fill:#ffe1f5
+    style Worker_Cluster fill:#ffe1f5
+    style Data fill:#e1ffe1
+    style Auth fill:#ffe1f5
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+        });
+    </script>
+</body>
+</html>

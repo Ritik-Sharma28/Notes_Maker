@@ -1,0 +1,50 @@
+sequenceDiagram
+    participant Client as Client
+    participant API as FastAPI
+    participant Redis as Redis Queue
+    participant Worker as arq Worker
+    participant Pipeline as LangGraph Pipeline
+    participant Extractor as Message Extractor
+    participant DB as PostgreSQL
+
+    Client->>API: 1. POST /api/v1/ingest<br/>{share_url: "..."}
+    API->>API: 2. Verify JWT
+    API->>API: 3. Check rate limit
+    API->>DB: 4. Create Source record
+    DB-->>API: 5. source_id
+    API->>DB: 6. Create Progress record
+    API->>Redis: 7. enqueue_job("run_pipeline_task", source_id)
+    API-->>Client: 8. 202 Accepted<br/>{source_id, status: "processing"}
+
+    Redis->>Worker: 9. Dequeue job
+    Worker->>DB: 10. Fetch Source
+    DB-->>Worker: 11. Source data
+    Worker->>Extractor: 12. Extract messages
+    Extractor->>Extractor: 13. Playwright scraping
+    Extractor-->>Worker: 14. raw_messages
+    Worker->>DB: 15. Update source.status = "processing"
+    Worker->>Pipeline: 16. Run LangGraph pipeline
+
+    Pipeline->>Pipeline: 17. build_patches
+    Pipeline->>Pipeline: 18. extract (LLM)
+    Pipeline->>Pipeline: 19. index_route (LLM+Emb)
+    Pipeline->>DB: 20. Create/Update Topics
+    Pipeline->>DB: 21. Insert RawFacts, CodeBlocks, Tables
+
+    loop For each dirty topic
+        Pipeline->>Pipeline: 22. author_note (LLM)
+        Pipeline->>Pipeline: 23. review (LLM)
+        alt Rejected
+            Pipeline->>Pipeline: 24. Retry author_note
+        end
+        Pipeline->>Pipeline: 25. diagram (LLM)
+        Pipeline->>Pipeline: 26. format
+        Pipeline->>DB: 27. Create/Update Notes
+        Pipeline->>DB: 28. Create NoteVersions
+    end
+
+    Pipeline-->>Worker: 29. Pipeline complete
+    Worker->>DB: 30. Update source.status = "completed"
+    Worker-->>Redis: 31. Job complete
+
+    Note over Client,Redis: Client polls GET /progress for updates

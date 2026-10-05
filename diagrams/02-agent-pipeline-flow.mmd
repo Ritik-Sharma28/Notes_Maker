@@ -1,0 +1,54 @@
+graph TD
+    Start([Pipeline Start<br/>run_pipeline source_id]) --> ExtractMsg[Phase 1: Message Extraction]
+    ExtractMsg --> FetchSource[Fetch Source from DB]
+    FetchSource --> CheckURL{share_url?}
+    CheckURL -->|Yes| ChatGPT[ChatGPTExtractor<br/>Playwright Scraping]
+    CheckURL -->|No| CheckRaw{raw_text?}
+    CheckRaw -->|Yes| RawPaste[RawPasteExtractor]
+    CheckRaw -->|No| Error1[Error: No content]
+    ChatGPT --> PersistMsg[Persist messages to<br/>source.raw_json]
+    RawPaste --> PersistMsg
+    PersistMsg --> UpdateStatus[Update status=processing]
+    UpdateStatus --> BuildGraph[Build LangGraph]
+
+    BuildGraph --> InitState[Initialize Pipeline State]
+    InitState --> Node1[Node 1: build_patches<br/>non-LLM]
+    Node1 --> Node2[Node 2: extract<br/>LLM]
+    Node2 --> Node3[Node 3: index_route<br/>LLM+Embeddings]
+
+    Node3 --> CheckDirty{has_dirty_topics?}
+    CheckDirty -->|No| End1([END])
+    CheckDirty -->|Yes| Node4[Node 4: author_note<br/>LLM]
+
+    Node4 --> Node5[Node 5: review<br/>LLM]
+    Node5 --> CheckReview{review_decision?}
+    CheckReview -->|Rejected<br/>& retry < 3| Node4
+    CheckReview -->|Approved| Node6[Node 6: diagram<br/>LLM+Regex]
+    CheckReview -->|Max retries| Node6
+
+    Node6 --> Node7[Node 7: format<br/>non-LLM]
+    Node7 --> Node8[Node 8: next_topic<br/>non-LLM]
+    Node8 --> CheckMore{more_topics?}
+    CheckMore -->|Yes| Node4
+    CheckMore -->|No| End2([END])
+
+    End1 --> Complete[Update status=completed]
+    End2 --> Complete
+    Error1 --> Failed[Update status=failed]
+    Complete --> Done([Pipeline Complete])
+    Failed --> Done
+
+    style Start fill:#ff9999
+    style End1 fill:#99ff99
+    style End2 fill:#99ff99
+    style Done fill:#99ff99
+    style Failed fill:#ff9999
+    style Error1 fill:#ff9999
+    style Node1 fill:#e1f5ff
+    style Node2 fill:#ffe1f5
+    style Node3 fill:#ffe1f5
+    style Node4 fill:#ffe1f5
+    style Node5 fill:#ffe1f5
+    style Node6 fill:#ffe1f5
+    style Node7 fill:#e1f5ff
+    style Node8 fill:#e1f5ff

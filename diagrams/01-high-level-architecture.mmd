@@ -1,0 +1,84 @@
+graph TB
+    subgraph Client["Client Layer"]
+        WebApp[Web/Mobile App]
+    end
+
+    subgraph API["API Gateway (FastAPI)"]
+        Auth[Authentication<br/>Supabase JWT]
+        RateLimit[Rate Limiting<br/>Redis-based]
+        Validation[Request Validation]
+        CORS[CORS Middleware]
+    end
+
+    subgraph SyncAPI["Synchronous API Routes"]
+        Sources[GET /sources]
+        Progress[GET /progress]
+        Topics[GET /topics]
+        Export[GET /export]
+    end
+
+    subgraph AsyncAPI["Async API"]
+        Ingest[POST /ingest]
+    end
+
+    subgraph Queue["Background Task Queue"]
+        Redis[Redis<br/>Task Queue]
+    end
+
+    subgraph Worker["Background Worker"]
+        ArqWorker[arq Worker<br/>run_pipeline_task]
+    end
+
+    subgraph Pipeline["LangGraph Agent Pipeline"]
+        Patch[Patch Builder<br/>non-LLM]
+        Extract[Extractor<br/>LLM]
+        Index[Index Keeper<br/>LLM+Embeddings]
+        Author[Note Author<br/>LLM]
+        Review[Reviewer<br/>LLM]
+        Diagram[Diagram Agent<br/>LLM+Regex]
+        Format[Formatter<br/>non-LLM]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[PostgreSQL<br/>+ pgvector]
+        RedisData[Redis<br/>Rate Limit]
+        Supabase[Supabase<br/>Auth]
+    end
+
+    WebApp -->|HTTPS + JWT| CORS
+    CORS --> Auth
+    Auth --> RateLimit
+    RateLimit --> Validation
+
+    Validation --> Sources
+    Validation --> Progress
+    Validation --> Topics
+    Validation --> Export
+    Validation --> Ingest
+
+    Ingest -->|Enqueue Task| Redis
+    Redis --> ArqWorker
+    ArqWorker --> Pipeline
+
+    Pipeline --> Patch
+    Patch --> Extract
+    Extract --> Index
+    Index --> Author
+    Author --> Review
+    Review -->|Approved| Diagram
+    Review -->|Rejected| Author
+    Diagram --> Format
+    Format --> PG
+
+    Sources --> PG
+    Progress --> PG
+    Topics --> PG
+    Export --> PG
+
+    RateLimit --> RedisData
+    Auth --> Supabase
+
+    style Client fill:#e1f5ff
+    style API fill:#fff4e1
+    style Pipeline fill:#ffe1f5
+    style Data fill:#e1ffe1

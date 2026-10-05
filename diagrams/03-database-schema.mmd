@@ -1,0 +1,121 @@
+erDiagram
+    auth_users ||--o{ sources : "owns"
+    auth_users ||--o{ topics : "owns"
+    auth_users ||--o{ notes : "owns"
+    auth_users ||--o{ progress : "tracks"
+    auth_users ||--o{ raw_facts : "owns"
+    auth_users ||--o{ code_blocks : "owns"
+    auth_users ||--o{ comparison_tables : "owns"
+
+    sources ||--o{ progress : "has"
+    sources ||--o{ raw_facts : "contributes to"
+    sources ||--o{ code_blocks : "contributes to"
+    sources ||--o{ comparison_tables : "contributes to"
+
+    topics ||--o{ raw_facts : "contains"
+    topics ||--o{ code_blocks : "contains"
+    topics ||--o{ comparison_tables : "contains"
+    topics ||--o{ notes : "has"
+    topics ||--o{ topics : "parent-child"
+
+    notes ||--o{ note_versions : "version history"
+
+    auth_users {
+        uuid id PK
+        string email
+        string role
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    sources {
+        uuid id PK
+        uuid user_id FK
+        string platform
+        string share_url
+        jsonb raw_json
+        string status
+        string error_message
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    topics {
+        uuid id PK
+        uuid user_id FK
+        string title
+        uuid parent_topic_id FK
+        vector embedding
+        boolean is_dirty
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    raw_facts {
+        uuid id PK
+        uuid user_id FK
+        uuid topic_id FK
+        uuid source_id FK
+        string angle
+        text fact_text
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    code_blocks {
+        uuid id PK
+        uuid topic_id FK
+        uuid source_id FK
+        string label
+        string language
+        text code
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    comparison_tables {
+        uuid id PK
+        uuid topic_id FK
+        uuid source_id FK
+        string title
+        jsonb rows
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    notes {
+        uuid id PK
+        uuid user_id FK
+        uuid topic_id FK
+        text content_markdown
+        jsonb diagrams
+        integer version
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    note_versions {
+        uuid id PK
+        uuid note_id FK
+        text content_markdown
+        jsonb diagrams
+        integer version
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    progress {
+        uuid id PK
+        uuid source_id FK
+        uuid user_id FK
+        string current_agent
+        string current_step
+        integer percentage
+        text message
+        text error_message
+        integer retry_count
+        jsonb last_agent_state
+        string user_role
+        timestamp created_at
+        timestamp updated_at
+    }

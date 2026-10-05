@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant Client as Client
+    participant Supabase as Supabase Auth
+    participant API as FastAPI API
+    participant JWT as JWT Verifier
+    participant RateLimit as Rate Limiter
+    participant Route as Route Handler
+    participant DB as Database
+
+    Client->>Supabase: 1. User logs in
+    Supabase-->>Client: 2. Return JWT token
+
+    Client->>API: 3. API Request<br/>Authorization: Bearer <token>
+    API->>JWT: 4. Extract token
+    JWT->>JWT: 5. Decode token
+    JWT->>JWT: 6. Verify signature
+    JWT->>JWT: 7. Check expiration
+    JWT-->>API: 8. Extract user_id, email
+
+    API->>JWT: 9. get_user_role(email)
+    JWT->>JWT: 10. Check ADMIN_EMAILS whitelist
+    JWT-->>API: 11. Return user_role
+
+    API->>RateLimit: 12. check_rate_limit(user_id, user_role)
+    RateLimit->>RateLimit: 13. Admin? → unlimited
+    RateLimit->>RateLimit: 14. Regular? → check Redis
+    RateLimit-->>API: 15. allowed=true/false
+
+    alt Rate limit exceeded
+        API-->>Client: 16. 429 Too Many Requests
+    else Rate limit OK
+        API->>Route: 17. Execute route handler
+        Route->>DB: 18. Query with user_id filter
+        DB-->>Route: 19. Return data
+        Route-->>API: 20. Return response
+        API-->>Client: 21. 200 OK with data
+    end
