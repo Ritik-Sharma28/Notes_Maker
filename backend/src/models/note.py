@@ -9,7 +9,7 @@ class Note(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "notes"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("auth.users", ondelete="CASCADE"), nullable=False
+        ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False
     )
     topic_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("topics.id", ondelete="CASCADE"), unique=True, nullable=False

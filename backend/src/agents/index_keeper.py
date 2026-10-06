@@ -53,9 +53,12 @@ async def run(state: PipelineState) -> dict:
             new_angle = group.get("angle", "general")
             vec = embedding_service.embed(topic_guess)
 
-            # Query similar topics by embedding
+            user_uuid = uuid.UUID(state["user_id"])
+
+            # Query similar topics by embedding for this user
             result = await session.execute(
                 select(Topic, (1 - Topic.embedding.cosine_distance(vec)).label("similarity"))
+                .where(Topic.user_id == user_uuid)
                 .order_by(Topic.embedding.cosine_distance(vec))
                 .limit(3)
             )
@@ -103,7 +106,7 @@ async def run(state: PipelineState) -> dict:
                         elif decision == "SUBTOPIC":
                             action = "subtopic"
                             new_topic = await repo.create_topic(
-                                title=topic_guess, embedding=vec
+                                user_id=uuid.UUID(state["user_id"]), title=topic_guess, embedding=vec
                             )
                             new_topic.parent_topic_id = best_topic.id
                             session.add(new_topic)
@@ -117,11 +120,11 @@ async def run(state: PipelineState) -> dict:
 
             # Create new topic if needed
             if resolved_topic_id is None:
-                new_topic = await repo.create_topic(title=topic_guess, embedding=vec)
+                new_topic = await repo.create_topic(user_id=uuid.UUID(state["user_id"]), title=topic_guess, embedding=vec)
                 resolved_topic_id = new_topic.id
 
             # Mark topic as dirty (needs re-authoring)
-            topic = await repo.get_topic(resolved_topic_id)
+            topic = await repo.get_topic(resolved_topic_id, uuid.UUID(state["user_id"]))
             if topic:
                 topic.is_dirty = True
                 session.add(topic)
@@ -139,6 +142,7 @@ async def run(state: PipelineState) -> dict:
                     RawFact(
                         topic_id=resolved_topic_id,
                         source_id=source_id,
+                        user_id=uuid.UUID(state["user_id"]),
                         angle=new_angle,
                         fact_text=fact,
                     )
@@ -150,6 +154,7 @@ async def run(state: PipelineState) -> dict:
                     CodeBlock(
                         topic_id=resolved_topic_id,
                         source_id=source_id,
+                        user_id=uuid.UUID(state["user_id"]),
                         label=cb.get("label"),
                         language=cb.get("language"),
                         code=cb.get("code"),
@@ -167,6 +172,7 @@ async def run(state: PipelineState) -> dict:
                     ComparisonTable(
                         topic_id=resolved_topic_id,
                         source_id=source_id,
+                        user_id=uuid.UUID(state["user_id"]),
                         title=tbl.get("title"),
                         rows=rows,
                     )

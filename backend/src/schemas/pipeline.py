@@ -1,6 +1,10 @@
 from typing import TypedDict
 
 class PipelineState(TypedDict):
+    # Context
+    user_id: str
+    user_role: str
+
     # Ingestion
     source_id: str
     raw_messages: list[dict]

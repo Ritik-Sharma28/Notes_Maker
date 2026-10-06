@@ -76,6 +76,17 @@ class Repository:
         user_id: uuid.UUID,
         user_role: str
     ) -> Progress:
+        existing = await self.get_progress(source_id, user_id)
+        if existing:
+            existing.current_agent = "pending"
+            existing.current_step = "initialized"
+            existing.percentage = 0
+            existing.message = "Pipeline initialized"
+            existing.error_message = None
+            self.session.add(existing)
+            await self.session.flush()
+            return existing
+
         progress = Progress(
             source_id=source_id,
             user_id=user_id,
@@ -100,14 +111,14 @@ class Repository:
         agent_state: dict | None = None
     ):
         result = await self.session.execute(
-            select(Progress).where(Progress.source_id == source_id)
+            select(Progress).where(Progress.source_id == source_id).order_by(Progress.created_at.desc())
         )
-        progress = result.scalar_one_or_none()
+        progress = result.scalars().first()
 
         if progress:
             progress.current_agent = current_agent
             progress.current_step = current_step
-            progress.percentage = percentage
+            progress.percentage = max(progress.percentage or 0, percentage)
             if message:
                 progress.message = message
             if error_message:
@@ -121,14 +132,15 @@ class Repository:
         result = await self.session.execute(
             select(Progress)
             .where(Progress.source_id == source_id, Progress.user_id == user_id)
+            .order_by(Progress.created_at.desc())
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def increment_retry_count(self, source_id: uuid.UUID):
         result = await self.session.execute(
-            select(Progress).where(Progress.source_id == source_id)
+            select(Progress).where(Progress.source_id == source_id).order_by(Progress.created_at.desc())
         )
-        progress = result.scalar_one_or_none()
+        progress = result.scalars().first()
         if progress:
             progress.retry_count += 1
             self.session.add(progress)

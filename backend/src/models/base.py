@@ -15,6 +15,17 @@ class UserRole(str, Enum):
 class Base(DeclarativeBase):
     pass
 
+from sqlalchemy import Table, Column
+from sqlalchemy.dialects.postgresql import UUID
+
+# Define a stub for auth.users so SQLAlchemy knows about it for ForeignKeys
+Table(
+    "users",
+    Base.metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    schema="auth",
+)
+
 class UUIDMixin:
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 

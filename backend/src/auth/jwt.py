@@ -6,41 +6,43 @@ from src.config.settings import settings
 from src.utils.logger import logger
 
 
+import httpx
+
 def verify_jwt_token(token: str) -> dict:
     """
-    Verify Supabase JWT token locally.
-    Returns decoded payload with user info.
+    Verify Supabase JWT token by calling the Supabase auth API.
+    Returns payload with user info.
     """
     try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            audience="authenticated",
-            algorithms=["HS256"],
-        )
-
-        # Check expiration
-        exp = payload.get("exp")
-        if exp and datetime.fromtimestamp(exp) < datetime.now():
+        # Use httpx to call the Supabase Auth server to validate the token
+        url = f"{settings.SUPABASE_URL}/auth/v1/user"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "apikey": settings.SUPABASE_ANON_KEY,
+        }
+        
+        # We can use a synchronous httpx client here (since verify_jwt_token is sync)
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(url, headers=headers)
+            
+        if response.status_code != 200:
+            logger.warning(f"Supabase auth failed: {response.text}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired"
+                detail="Invalid or expired token"
             )
+            
+        user_data = response.json()
+        
+        # Format the response to match what the app expects from the decoded payload
+        return {
+            "sub": user_data.get("id"),
+            "email": user_data.get("email"),
+            "role": user_data.get("role", "authenticated"),
+        }
 
-        return payload
-
-    except jwt.ExpiredSignatureError:
-        logger.warning("Expired token attempt")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired"
-        )
-    except jwt.InvalidTokenError as e:
-        logger.warning(f"Invalid token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"JWT verification error: {str(e)}")
         raise HTTPException(

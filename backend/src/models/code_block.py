@@ -1,14 +1,14 @@
 import uuid
 from sqlalchemy import String, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from .base import Base, UUIDMixin, TimestampMixin
+from .base import Base, UUIDMixin
 
 
-class CodeBlock(Base, UUIDMixin, TimestampMixin):
+class CodeBlock(Base, UUIDMixin):
     __tablename__ = "code_blocks"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("auth.users", ondelete="CASCADE"), nullable=False
+        ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False
     )
     topic_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("topics.id", ondelete="CASCADE"), nullable=False

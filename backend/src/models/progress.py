@@ -13,7 +13,7 @@ class Progress(Base, UUIDMixin, TimestampMixin):
         ForeignKey("sources.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("auth.users", ondelete="CASCADE"), nullable=False
+        ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False
     )
     current_agent: Mapped[str] = mapped_column(String(50), nullable=False)
     current_step: Mapped[str | None] = mapped_column(String(100), nullable=True)

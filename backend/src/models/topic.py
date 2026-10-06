@@ -10,7 +10,7 @@ class Topic(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "topics"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("auth.users", ondelete="CASCADE"), nullable=False
+        ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     parent_topic_id: Mapped[uuid.UUID | None] = mapped_column(

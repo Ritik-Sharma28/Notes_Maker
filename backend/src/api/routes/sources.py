@@ -52,17 +52,35 @@ async def get_source_progress(
     repo: Repository = Depends(get_repository)
 ):
     """Get detailed progress for a source."""
+    source = await repo.get_source(source_id, user_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
     progress = await repo.get_progress(source_id, user_id)
     if not progress:
-        raise HTTPException(status_code=404, detail="Progress not found")
+        return {
+            "source_id": str(source_id),
+            "status": source.status,
+            "current_agent": "Failed" if source.status == "failed" else "Initializing",
+            "current_step": "Failed" if source.status == "failed" else "Waiting for worker to start...",
+            "percentage": 100 if source.status == "failed" else 0,
+            "message": "Error" if source.status == "failed" else "Queued",
+            "error_message": source.error_message if source.status == "failed" else None,
+            "retry_count": 0,
+            "updated_at": source.updated_at or source.created_at
+        }
+
+    is_failed = (source.status == "failed") or (progress.current_agent and progress.current_agent.lower() == "failed")
+    is_completed = (source.status == "completed") or (progress.current_agent and progress.current_agent.lower() in ("finish", "completed"))
 
     return {
         "source_id": str(progress.source_id),
-        "current_agent": progress.current_agent,
-        "current_step": progress.current_step,
-        "percentage": progress.percentage,
-        "message": progress.message,
-        "error_message": progress.error_message,
+        "status": "failed" if is_failed else ("completed" if is_completed else source.status),
+        "current_agent": "Failed" if is_failed else ("Finish" if is_completed else progress.current_agent),
+        "current_step": "Failed" if is_failed else progress.current_step,
+        "percentage": 100 if (is_failed or is_completed) else progress.percentage,
+        "message": progress.message or source.error_message,
+        "error_message": (progress.error_message or source.error_message) if is_failed else None,
         "retry_count": progress.retry_count,
         "updated_at": progress.updated_at
     }

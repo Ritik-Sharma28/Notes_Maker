@@ -8,6 +8,7 @@ Handles:
 """
 import logging
 from src.schemas.pipeline import PipelineState
+import uuid
 from src.db.session import async_session_maker
 from src.db.repository import Repository
 from src.models.note import Note
@@ -69,7 +70,8 @@ async def run(state: PipelineState) -> dict:
     if idx >= len(topic_ids):
         return {}
 
-    topic_id = topic_ids[idx]
+    raw_topic_id = topic_ids[idx]
+    topic_uuid = uuid.UUID(raw_topic_id) if isinstance(raw_topic_id, str) else raw_topic_id
     note_md = state.get("current_note_md", "")
     diagrams = state.get("current_diagrams", [])
 
@@ -78,12 +80,12 @@ async def run(state: PipelineState) -> dict:
 
     async with async_session_maker() as session:
         repo = Repository(session)
-        topic = await repo.get_topic(topic_id)
+        topic = await repo.get_topic(topic_uuid, uuid.UUID(state["user_id"]))
 
         if topic:
             # Check for existing note
             result = await session.execute(
-                select(Note).where(Note.topic_id == topic_id)
+                select(Note).where(Note.topic_id == topic_uuid)
             )
             existing_note = result.scalar_one_or_none()
 
@@ -91,6 +93,7 @@ async def run(state: PipelineState) -> dict:
                 # Save current version as a NoteVersion before overwriting
                 version_snapshot = NoteVersion(
                     note_id=existing_note.id,
+                    user_id=uuid.UUID(state["user_id"]),
                     content_markdown=existing_note.content_markdown,
                     diagrams=existing_note.diagrams or [],
                     version=existing_note.version,
@@ -108,7 +111,8 @@ async def run(state: PipelineState) -> dict:
             else:
                 # Create new note
                 new_note = Note(
-                    topic_id=topic_id,
+                    topic_id=topic_uuid,
+                    user_id=uuid.UUID(state["user_id"]),
                     content_markdown=final_note_md,
                     diagrams=diagrams,
                     version=1,
@@ -122,6 +126,6 @@ async def run(state: PipelineState) -> dict:
             await session.commit()
 
     completed = list(state.get("completed_topic_ids", []))
-    completed.append(topic_id)
+    completed.append(raw_topic_id)
 
     return {"completed_topic_ids": completed}

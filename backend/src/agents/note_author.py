@@ -11,6 +11,7 @@ this agent re-authors the FULL note, merging old and new naturally.
 """
 import json
 import logging
+import uuid
 from langchain_core.messages import HumanMessage
 from src.llm.factory import get_llm
 from src.schemas.pipeline import PipelineState
@@ -32,27 +33,28 @@ async def run(state: PipelineState) -> dict:
     if idx >= len(topic_ids):
         return {}
 
-    topic_id = topic_ids[idx]
+    raw_topic_id = topic_ids[idx]
+    topic_uuid = uuid.UUID(raw_topic_id) if isinstance(raw_topic_id, str) else raw_topic_id
 
     prompt_path = PROMPTS_DIR / "note_author.txt"
     prompt_text = prompt_path.read_text(encoding="utf-8")
 
     async with async_session_maker() as session:
         # Get topic title
-        topic = await session.get(Topic, topic_id)
+        topic = await session.get(Topic, topic_uuid)
         topic_title = topic.title if topic else "Untitled"
 
         # Fetch ALL facts for this topic (across all sources and sessions)
         facts_res = await session.execute(
             select(RawFact)
-            .where(RawFact.topic_id == topic_id)
+            .where(RawFact.topic_id == topic_uuid)
             .order_by(RawFact.id)  # preserve insertion order
         )
         code_res = await session.execute(
-            select(CodeBlock).where(CodeBlock.topic_id == topic_id)
+            select(CodeBlock).where(CodeBlock.topic_id == topic_uuid)
         )
         tbl_res = await session.execute(
-            select(ComparisonTable).where(ComparisonTable.topic_id == topic_id)
+            select(ComparisonTable).where(ComparisonTable.topic_id == topic_uuid)
         )
 
         # Group facts by angle for the prompt

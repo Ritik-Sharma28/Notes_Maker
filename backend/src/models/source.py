@@ -9,7 +9,7 @@ class Source(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "sources"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("auth.users", ondelete="CASCADE"), nullable=False
+        ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False
     )
     platform: Mapped[str] = mapped_column(String, nullable=False)
     share_url: Mapped[str | None] = mapped_column(String, nullable=True)
