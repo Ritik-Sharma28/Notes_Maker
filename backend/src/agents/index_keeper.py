@@ -104,14 +104,8 @@ async def run(state: PipelineState) -> dict:
                             action = "extend"
                             resolved_topic_id = best_topic.id
                         elif decision == "SUBTOPIC":
-                            action = "subtopic"
-                            new_topic = await repo.create_topic(
-                                user_id=uuid.UUID(state["user_id"]), title=topic_guess, embedding=vec
-                            )
-                            new_topic.parent_topic_id = best_topic.id
-                            session.add(new_topic)
-                            await session.flush()
-                            resolved_topic_id = new_topic.id
+                            action = "extend"
+                            resolved_topic_id = best_topic.id
                         else:
                             action = "new"
                     except Exception as e:
