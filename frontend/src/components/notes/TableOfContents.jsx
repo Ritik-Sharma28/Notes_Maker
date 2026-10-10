@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlignLeft } from 'lucide-react'
 
 export default function TableOfContents({ content }) {
   const [headings, setHeadings] = useState([])
@@ -23,7 +24,6 @@ export default function TableOfContents({ content }) {
       if (match) {
         const level = match[1].length
         const text = match[2].trim()
-        // Simple slugify matching rehype-slug
         const id = text.toLowerCase().replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').replace(/-+$/, '')
         extracted.push({ id, text, level })
       }
@@ -53,61 +53,81 @@ export default function TableOfContents({ content }) {
     })
 
     return () => observer.disconnect()
-  }, [headings, content]) // Re-run if content changes
+  }, [headings, content])
 
   if (headings.length === 0) return null
 
   return (
-    <nav style={{ padding: '24px', fontFamily: 'var(--font-sans)' }}>
-      <p style={{
-        fontSize: '12px',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        color: 'var(--muted-foreground)',
-        marginBottom: '16px',
+    <nav style={{ padding: '20px 16px', fontFamily: 'var(--font-sans)' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        marginBottom: '14px',
       }}>
-        On this page
-      </p>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {headings.map((heading) => (
-          <li
-            key={heading.id}
-            style={{
-              paddingLeft: `${(heading.level - 1) * 12}px`,
-            }}
-          >
-            <a
-              href={`#${heading.id}`}
+        <AlignLeft size={12} strokeWidth={2} color="var(--muted-foreground)" />
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.07em',
+          color: 'var(--muted-foreground)',
+        }}>
+          On this page
+        </span>
+      </div>
+
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        {headings.map((heading) => {
+          const isActive = activeId === heading.id
+          return (
+            <li
+              key={heading.id}
               style={{
-                display: 'block',
-                fontSize: '13px',
-                color: activeId === heading.id ? 'var(--foreground)' : 'var(--muted-foreground)',
-                fontWeight: activeId === heading.id ? 500 : 400,
-                textDecoration: 'none',
-                lineHeight: 1.4,
-                transition: 'color 0.12s',
-              }}
-              onMouseEnter={(e) => {
-                if (activeId !== heading.id) e.currentTarget.style.color = 'var(--foreground)'
-              }}
-              onMouseLeave={(e) => {
-                if (activeId !== heading.id) e.currentTarget.style.color = 'var(--muted-foreground)'
-              }}
-              onClick={(e) => {
-                e.preventDefault()
-                const el = document.getElementById(heading.id)
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth' })
-                  // Update URL hash without jumping
-                  window.history.pushState(null, '', `#${heading.id}`)
-                }
+                paddingLeft: `${(heading.level - 1) * 10}px`,
               }}
             >
-              {heading.text}
-            </a>
-          </li>
-        ))}
+              <a
+                href={`#${heading.id}`}
+                style={{
+                  display: 'block',
+                  fontSize: '12.5px',
+                  color: isActive ? 'var(--foreground)' : 'var(--muted-foreground)',
+                  fontWeight: isActive ? 500 : 400,
+                  textDecoration: 'none',
+                  lineHeight: 1.45,
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  transition: 'color 0.12s, background 0.12s',
+                  background: isActive ? 'var(--sunken)' : 'transparent',
+                  borderLeft: isActive ? '2px solid var(--primary)' : '2px solid transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = 'var(--foreground)'
+                    e.currentTarget.style.background = 'var(--hover-bg)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = 'var(--muted-foreground)'
+                    e.currentTarget.style.background = 'transparent'
+                  }
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  const el = document.getElementById(heading.id)
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' })
+                    window.history.pushState(null, '', `#${heading.id}`)
+                  }
+                }}
+              >
+                {heading.text}
+              </a>
+            </li>
+          )
+        })}
       </ul>
     </nav>
   )

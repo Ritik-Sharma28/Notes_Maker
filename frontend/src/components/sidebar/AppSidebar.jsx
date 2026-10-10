@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FilePlus2, BookOpen, Inbox, Settings, ChevronRight, LogOut } from 'lucide-react'
+import { FilePlus2, BookOpen, Inbox, Settings, ChevronRight, LogOut, PenLine } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 const NAV_ITEMS = [
@@ -19,7 +19,12 @@ export default function AppSidebar({ isOpen, onToggle }) {
 
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + '/')
 
-  const sidebarWidth = isOpen ? '248px' : '56px'
+  const sidebarWidth = isOpen ? '220px' : '54px'
+
+  // User initials avatar
+  const initials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : '?'
 
   return (
     <aside style={{
@@ -31,16 +36,17 @@ export default function AppSidebar({ isOpen, onToggle }) {
       flexDirection: 'column',
       height: '100vh',
       overflow: 'hidden',
-      transition: 'width 0.15s ease-out, min-width 0.15s ease-out',
+      transition: 'width 0.18s cubic-bezier(0.4,0,0.2,1), min-width 0.18s cubic-bezier(0.4,0,0.2,1)',
       flexShrink: 0,
     }}>
-      {/* Wordmark / collapse button */}
+
+      {/* Logo + collapse */}
       <div style={{
-        height: '56px',
+        height: '54px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        padding: isOpen ? '0 16px' : '0',
+        padding: isOpen ? '0 12px 0 14px' : '0',
         justifyContent: isOpen ? 'space-between' : 'center',
         flexShrink: 0,
       }}>
@@ -48,16 +54,30 @@ export default function AppSidebar({ isOpen, onToggle }) {
           <Link
             to="/"
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontWeight: 600,
-              fontSize: '15px',
-              color: 'var(--foreground)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
               textDecoration: 'none',
-              letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap',
             }}
           >
-            ChatNotes
+            <div style={{
+              width: '26px', height: '26px', borderRadius: '7px',
+              background: 'var(--primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <PenLine size={13} strokeWidth={2} color="var(--primary-foreground)" />
+            </div>
+            <span style={{
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 600,
+              fontSize: '14px',
+              color: 'var(--foreground)',
+              letterSpacing: '-0.02em',
+              whiteSpace: 'nowrap',
+            }}>
+              ChatNotes
+            </span>
           </Link>
         )}
         <button
@@ -73,26 +93,27 @@ export default function AppSidebar({ isOpen, onToggle }) {
             border: 'none',
             cursor: 'pointer',
             color: 'var(--muted-foreground)',
-            borderRadius: 'var(--radius-control)',
+            borderRadius: '6px',
             flexShrink: 0,
-            transition: 'color 0.12s',
+            transition: 'color 0.12s, background 0.12s',
           }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--foreground)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--foreground)'; e.currentTarget.style.background = 'var(--background)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.background = 'none' }}
         >
           <ChevronRight
-            size={16}
-            strokeWidth={1.5}
+            size={15}
+            strokeWidth={2}
             style={{
               transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.15s ease-out',
+              transition: 'transform 0.18s ease-out',
             }}
           />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+      <nav style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
+
         {/* New notes button */}
         <Link
           to="/app/ingest"
@@ -101,25 +122,25 @@ export default function AppSidebar({ isOpen, onToggle }) {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: isOpen ? '0 12px' : '0',
-            height: '36px',
-            borderRadius: 'var(--radius-control)',
+            padding: isOpen ? '0 10px' : '0',
+            height: '34px',
+            borderRadius: '7px',
             background: 'var(--primary)',
             color: 'var(--primary-foreground)',
             textDecoration: 'none',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: 500,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
-            marginBottom: '8px',
+            marginBottom: '6px',
             justifyContent: isOpen ? 'flex-start' : 'center',
-            transition: 'background 0.12s',
+            transition: 'background 0.12s, transform 0.1s',
             flexShrink: 0,
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--primary)'}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary-hover)'; e.currentTarget.style.transform = 'scale(1.01)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.transform = 'scale(1)' }}
         >
-          <FilePlus2 size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          <FilePlus2 size={15} strokeWidth={1.75} style={{ flexShrink: 0 }} />
           {isOpen && <span>New notes</span>}
         </Link>
 
@@ -135,18 +156,18 @@ export default function AppSidebar({ isOpen, onToggle }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: isOpen ? '0 12px' : '0',
+                padding: isOpen ? '0 10px' : '0',
                 height: '32px',
-                borderRadius: 'var(--radius-control)',
+                borderRadius: '7px',
                 background: active ? 'var(--background)' : 'transparent',
                 color: active ? 'var(--foreground)' : 'var(--muted-foreground)',
                 textDecoration: 'none',
-                fontSize: '14px',
+                fontSize: '13px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 justifyContent: isOpen ? 'flex-start' : 'center',
                 transition: 'background 0.12s, color 0.12s',
-                borderLeft: active && isOpen ? '2px solid var(--primary)' : '2px solid transparent',
+                fontWeight: active ? 500 : 400,
               }}
               onMouseEnter={e => {
                 if (!active) {
@@ -161,14 +182,14 @@ export default function AppSidebar({ isOpen, onToggle }) {
                 }
               }}
             >
-              <Icon size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+              <Icon size={16} strokeWidth={1.5} style={{ flexShrink: 0 }} />
               {isOpen && <span>{label}</span>}
             </Link>
           )
         })}
       </nav>
 
-      {/* Bottom: Settings + user */}
+      {/* Bottom section */}
       <div style={{ borderTop: '1px solid var(--border)', padding: '8px', flexShrink: 0 }}>
         <Link
           to="/app/settings"
@@ -177,13 +198,13 @@ export default function AppSidebar({ isOpen, onToggle }) {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: isOpen ? '0 12px' : '0',
+            padding: isOpen ? '0 10px' : '0',
             height: '32px',
-            borderRadius: 'var(--radius-control)',
+            borderRadius: '7px',
             background: isActive('/app/settings') ? 'var(--background)' : 'transparent',
-            color: 'var(--muted-foreground)',
+            color: isActive('/app/settings') ? 'var(--foreground)' : 'var(--muted-foreground)',
             textDecoration: 'none',
-            fontSize: '14px',
+            fontSize: '13px',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             justifyContent: isOpen ? 'flex-start' : 'center',
@@ -191,16 +212,41 @@ export default function AppSidebar({ isOpen, onToggle }) {
             marginBottom: '4px',
           }}
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--background)'; e.currentTarget.style.color = 'var(--foreground)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = isActive('/app/settings') ? 'var(--background)' : 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = isActive('/app/settings') ? 'var(--background)' : 'transparent'; e.currentTarget.style.color = isActive('/app/settings') ? 'var(--foreground)' : 'var(--muted-foreground)' }}
         >
-          <Settings size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          <Settings size={16} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           {isOpen && <span>Settings</span>}
         </Link>
 
         {/* User row */}
         {isOpen && user && (
-          <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 10px',
+            borderRadius: '7px',
+            marginTop: '2px',
+          }}>
+            {/* Avatar */}
+            <div style={{
+              width: '26px', height: '26px', borderRadius: '50%',
+              background: 'var(--primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--primary-foreground)', letterSpacing: '0.01em' }}>
+                {initials}
+              </span>
+            </div>
+            <span style={{
+              fontSize: '12px',
+              color: 'var(--muted-foreground)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+            }}>
               {user.email}
             </span>
             <button
@@ -215,14 +261,14 @@ export default function AppSidebar({ isOpen, onToggle }) {
                 display: 'flex',
                 alignItems: 'center',
                 padding: '4px',
-                borderRadius: 'var(--radius-control)',
+                borderRadius: '5px',
                 flexShrink: 0,
-                transition: 'color 0.12s',
+                transition: 'color 0.12s, background 0.12s',
               }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--foreground)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--destructive)'; e.currentTarget.style.background = 'color-mix(in srgb, var(--destructive) 10%, transparent)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.background = 'none' }}
             >
-              <LogOut size={14} strokeWidth={1.5} />
+              <LogOut size={13} strokeWidth={1.5} />
             </button>
           </div>
         )}
@@ -242,13 +288,13 @@ export default function AppSidebar({ isOpen, onToggle }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 'var(--radius-control)',
-              transition: 'color 0.12s',
+              borderRadius: '7px',
+              transition: 'color 0.12s, background 0.12s',
             }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--foreground)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--destructive)'; e.currentTarget.style.background = 'color-mix(in srgb, var(--destructive) 8%, transparent)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.background = 'none' }}
           >
-            <LogOut size={16} strokeWidth={1.5} />
+            <LogOut size={15} strokeWidth={1.5} />
           </button>
         )}
       </div>

@@ -31,29 +31,47 @@ ChatNotes API is a production-ready system for ingesting, processing, and genera
 
 ## Installation
 
-1. Create a virtual environment and activate it:
+1. Create a virtual environment:
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
    ```
-2. Install the required dependencies:
+
+2. **Activate the virtual environment** — you must do this every time before running the app:
+
+   | Platform | Command |
+   |---|---|
+   | **Windows (PowerShell)** | `.\venv\Scripts\Activate.ps1` |
+   | **Windows (CMD)** | `venv\Scripts\activate.bat` |
+   | **macOS / Linux** | `source venv/bin/activate` |
+
+   You'll see `(venv)` in your prompt when it's active.
+
+3. Install the required dependencies (inside the activated venv):
    ```bash
    pip install -e .
    ```
 
+> **Tip:** If the `venv` folder already exists (e.g. after cloning), just activate it and re-run `pip install -e .` to make sure everything is up to date. Running `python` without activating the venv will use the system Python, which doesn't have the project's packages installed.
+
 ## Running the Application
 
-1. **Apply Database Migrations** (if using Alembic):
+> ⚠️ **Always activate the virtual environment first** before running any command below.
+> - Windows: `.\venv\Scripts\Activate.ps1`
+> - macOS/Linux: `source venv/bin/activate`
+
+1. **Apply Database Migrations**:
    ```bash
    alembic upgrade head
    ```
+
 2. **Start the API Server**:
    ```bash
-   uvicorn src.api.app:create_app --host 0.0.0.0 --port 8000 --factory --reload
+   python -m uvicorn src.api.app:create_app --host 0.0.0.0 --port 8000 --factory --reload
    ```
-3. **Start the Background Worker**:
+
+3. **Start the Background Worker** (open a second terminal, activate the venv there too):
    ```bash
-   arq src.workers.tasks.WorkerSettings
+   python -m arq src.workers.tasks.WorkerSettings
    ```
 
 ## Running Tests

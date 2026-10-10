@@ -15,6 +15,8 @@
   --primary: #1F5A4A;
   --primary-hover: #184A3C;
   --primary-foreground: #F5F5F1;
+  --primary-soft: color-mix(in srgb, var(--primary) 10%, transparent);
+  --hover-bg: color-mix(in srgb, var(--foreground) 5%, transparent);
   --secondary: #ECECE6;
   --secondary-foreground: #1C1F1D;
   --accent: #ECECE6;
@@ -44,6 +46,8 @@
   --primary: #6FBFA3;
   --primary-hover: #86CDB3;
   --primary-foreground: #11201B;
+  --primary-soft: color-mix(in srgb, var(--primary) 14%, transparent);
+  --hover-bg: color-mix(in srgb, var(--foreground) 6%, transparent);
   --secondary: #1B1F1C;
   --secondary-foreground: #E8E9E4;
   --accent: #1B1F1C;
@@ -298,4 +302,32 @@ body {
     animation: none;
     background: var(--sunken);
   }
+}
+
+/* Custom scrollbar for topics sidebar */
+.topics-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.topics-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.topics-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.topics-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
+}
+
+.topics-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}
+
+/* Smooth focus transitions */
+input, textarea, button {
+  -webkit-tap-highlight-color: transparent;
 }

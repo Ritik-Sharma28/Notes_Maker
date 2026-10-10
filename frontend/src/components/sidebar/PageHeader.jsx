@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor } from 'lucide-react'
+import { useLocation, Link } from 'react-router-dom'
+import { Sun, Moon, Monitor, ChevronRight } from 'lucide-react'
 import { useTheme } from '@/app/ThemeProvider'
 
 const PAGE_TITLES = {
@@ -9,16 +9,16 @@ const PAGE_TITLES = {
   '/app/settings': 'Settings',
 }
 
-function getPageTitle(pathname) {
-  if (pathname.startsWith('/app/processing/')) return 'Creating your notes'
-  if (pathname.startsWith('/app/topics/')) return 'Notes'
-  return PAGE_TITLES[pathname] || 'ChatNotes'
+function getPageInfo(pathname) {
+  if (pathname.startsWith('/app/processing/')) return { title: 'Processing', breadcrumb: null }
+  if (pathname.startsWith('/app/topics/')) return { title: 'Notes', breadcrumb: null }
+  return { title: PAGE_TITLES[pathname] || 'ChatNotes', breadcrumb: null }
 }
 
 export default function PageHeader({ onMenuClick, sidebarOpen }) {
   const location = useLocation()
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const title = getPageTitle(location.pathname)
+  const { theme, setTheme } = useTheme()
+  const { title } = getPageInfo(location.pathname)
 
   const cycleTheme = () => {
     const next = { system: 'light', light: 'dark', dark: 'system' }
@@ -30,36 +30,51 @@ export default function PageHeader({ onMenuClick, sidebarOpen }) {
 
   return (
     <header style={{
-      height: '56px',
+      height: '48px',
       borderBottom: '1px solid var(--border)',
       display: 'flex',
       alignItems: 'center',
-      padding: '0 24px',
+      padding: '0 20px',
       justifyContent: 'space-between',
       backgroundColor: 'var(--background)',
       flexShrink: 0,
       position: 'relative',
       zIndex: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Breadcrumb / page title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{
-          fontSize: '15px',
-          fontWeight: 600,
-          color: 'var(--foreground)',
+          fontSize: '13.5px',
+          fontWeight: 500,
+          color: 'var(--muted-foreground)',
           letterSpacing: '-0.01em',
         }}>
-          {title}
+          ChatNotes
         </span>
+        {title && title !== 'ChatNotes' && (
+          <>
+            <ChevronRight size={13} strokeWidth={1.5} color="var(--border)" />
+            <span style={{
+              fontSize: '13.5px',
+              fontWeight: 500,
+              color: 'var(--foreground)',
+              letterSpacing: '-0.01em',
+            }}>
+              {title}
+            </span>
+          </>
+        )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Right actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <button
           onClick={cycleTheme}
           aria-label={themeLabel}
           title={themeLabel}
           style={{
-            width: '32px',
-            height: '32px',
+            width: '30px',
+            height: '30px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -67,13 +82,13 @@ export default function PageHeader({ onMenuClick, sidebarOpen }) {
             border: 'none',
             cursor: 'pointer',
             color: 'var(--muted-foreground)',
-            borderRadius: 'var(--radius-control)',
+            borderRadius: '6px',
             transition: 'color 0.12s, background 0.12s',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--foreground)'; e.currentTarget.style.background = 'var(--sunken)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.background = 'none' }}
         >
-          <ThemeIcon size={16} strokeWidth={1.5} />
+          <ThemeIcon size={15} strokeWidth={1.5} />
         </button>
       </div>
     </header>
